@@ -20,10 +20,16 @@ val benchmarksSourceSet = sourceSets.create("benchmarks")
 
 kotlin {
     jvmToolchain(21)
-
+    compilerOptions {
+        freeCompilerArgs.add("-Xmulti-dollar-interpolation")
+    }
     target {
         compilations["benchmarks"].associateWith(compilations["main"])
     }
+}
+
+ktlint {
+    version = "1.4.1"
 }
 
 val benchmarksImplementation by configurations
