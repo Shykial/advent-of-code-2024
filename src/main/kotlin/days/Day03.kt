@@ -4,7 +4,7 @@ import utils.readInputLines
 
 object Day03 {
     private val multipliersRegex = Regex("""mul\((\d+),(\d+)\)""")
-    private val conditionalSectorRegex = Regex($$"""(?:^|do\(\))(.*?)(?:don't\(\)|$)""")
+    private val conditionalSectorRegex = Regex("""(?:^|do\(\))(.*?)(?:don't\(\)|$)""")
 
     fun part1(input: List<String>): Int = input.joinToString("").sumMultiplications()
 
