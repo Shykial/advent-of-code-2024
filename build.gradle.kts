@@ -28,8 +28,13 @@ kotlin {
     }
 }
 
+val benchmarksDirectorySubPath = File.separator + benchmarksSourceSet.name + File.separator
+
 ktlint {
     version = "1.4.1"
+    filter {
+        exclude { benchmarksDirectorySubPath in it.file.absolutePath }
+    }
 }
 
 val benchmarksImplementation by configurations
