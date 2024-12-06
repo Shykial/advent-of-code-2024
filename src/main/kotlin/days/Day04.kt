@@ -2,9 +2,9 @@ package days
 
 import utils.Coordinates
 import utils.Move
-import utils.Point
 import utils.getOrNull
 import utils.plus
+import utils.pointsSequence
 import utils.readInputLines
 
 object Day04 {
@@ -42,11 +42,6 @@ object Day04 {
             moves
                 .mapNotNull { move -> grid.getOrNull(middleCoordinates + move) }
                 .toSet() == XmasBox.otherChars
-        }
-
-    private fun List<String>.pointsSequence(): Sequence<Point<Char>> =
-        asSequence().flatMapIndexed { y, string ->
-            string.mapIndexed { x, char -> Point(char, Coordinates(y, x)) }
         }
 
     private val moves = (-1..1).flatMap { m -> (-1..1).map { Move(m, it) } }
