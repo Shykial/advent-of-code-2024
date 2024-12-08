@@ -21,3 +21,8 @@ inline fun <T> Iterable<T>.splitBy(delimiterPredicate: (T) -> Boolean): List<Lis
     }
     currentAggregate?.let { this += it }
 }
+
+fun <T> List<T>.pairCombinations(): Sequence<Pair<T, T>> =
+    asSequence().flatMapIndexed { index, element ->
+        (index + 1..lastIndex).asSequence().map { element to this[it] }
+    }
