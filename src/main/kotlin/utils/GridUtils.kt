@@ -12,6 +12,8 @@ operator fun Coordinates.minus(other: Coordinates) = Move(yShift = y - other.y, 
 
 fun List<CharSequence>.getOrNull(coordinates: Coordinates): Char? = getOrNull(coordinates.y)?.getOrNull(coordinates.x)
 
+fun <T> List<List<T>>.getOrNull(coordinates: Coordinates): T? = getOrNull(coordinates.y)?.getOrNull(coordinates.x)
+
 operator fun List<CharSequence>.contains(coordinates: Coordinates) = getOrNull(coordinates) != null
 
 data class Point<T>(val value: T, val coordinates: Coordinates)
@@ -25,7 +27,13 @@ infix fun Move.turn(turn: Turn) = when (turn) {
 
 data class MovingPoint(val coordinates: Coordinates, val move: Move)
 
+@JvmName("stringsPointsSequence")
 fun List<String>.pointsSequence(): Sequence<Point<Char>> =
     asSequence().flatMapIndexed { y, string ->
         string.mapIndexed { x, char -> Point(char, Coordinates(y, x)) }
+    }
+
+fun <T> List<List<T>>.pointsSequence(): Sequence<Point<T>> =
+    asSequence().flatMapIndexed { y, row ->
+        row.mapIndexed { x, element -> Point(element, Coordinates(y, x)) }
     }
