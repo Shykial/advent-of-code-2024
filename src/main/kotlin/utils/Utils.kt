@@ -26,3 +26,9 @@ fun <T> List<T>.pairCombinations(): Sequence<Pair<T, T>> =
     asSequence().flatMapIndexed { index, element ->
         (index + 1..lastIndex).asSequence().map { element to this[it] }
     }
+
+fun <T> MutableList<T>.swap(firstIndex: Int, secondIndex: Int) {
+    set(firstIndex, set(secondIndex, get(firstIndex)))
+}
+
+inline fun <T, R> Pair<T, T>.map(transform: (T) -> R): Pair<R, R> = transform(first) to transform(second)
