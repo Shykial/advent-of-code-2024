@@ -32,3 +32,7 @@ fun <T> MutableList<T>.swap(firstIndex: Int, secondIndex: Int) {
 }
 
 inline fun <T, R> Pair<T, T>.map(transform: (T) -> R): Pair<R, R> = transform(first) to transform(second)
+
+fun String.cutAt(index: Int): Pair<String, String> = take(index) to drop(index)
+
+fun String.cutInHalf(): Pair<String, String> = cutAt(length / 2)
