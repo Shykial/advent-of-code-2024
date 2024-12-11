@@ -24,17 +24,19 @@ object Day10 {
 
         private fun Point<Int>.countReachableTrailheads(seenHeads: MutableSet<Coordinates>): Int {
             if (value == 9) return if (seenHeads.add(coordinates)) 1 else 0
-            return hikingSequence().sumOf { Point(value + 1, it).countReachableTrailheads(seenHeads) }
+            return hikingSequence().sumOf { it.countReachableTrailheads(seenHeads) }
         }
 
         private fun Point<Int>.countUniqueHikingPaths(): Int {
             if (value == 9) return 1
-            return hikingSequence().sumOf { Point(value + 1, it).countUniqueHikingPaths() }
+            return hikingSequence().sumOf { it.countUniqueHikingPaths() }
         }
 
-        private fun Point<Int>.hikingSequence() = allowedMoves.asSequence()
-            .map { coordinates + it }
-            .filter { values.getOrNull(it) == value + 1 }
+        private fun Point<Int>.hikingSequence() =
+            allowedMoves.asSequence().mapNotNull { move ->
+                val newCoords = coordinates + move
+                values.getOrNull(newCoords).takeIf { it == value + 1 }?.let { Point(it, newCoords) }
+            }
     }
 
     private val allowedMoves = listOf(
