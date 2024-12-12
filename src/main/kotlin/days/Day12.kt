@@ -1,129 +1,104 @@
 package days
 
+import utils.Coordinates
 import utils.Moves
 import utils.MovingPoint
 import utils.Point
 import utils.Turn
 import utils.getOrNull
+import utils.opposite
 import utils.plus
 import utils.pointsSequence
+import utils.readInputLines
 import utils.turn
 
 object Day12 {
+
+    private fun List<String>.getRegionSiblings(point: Point<Char>) = Moves.Standard.mapNotNull { move ->
+        val newCoords = point.coordinates + move
+        getOrNull(newCoords)
+            ?.takeIf { it == point.value }
+            ?.let { Point(value = it, coordinates = newCoords) }
+    }
+
     fun part1(input: List<String>): Int {
         val points = input.pointsSequence().associateBy { it.coordinates }.toMap(LinkedHashMap())
 
-        data class Chunk(val area: Int, val perimeter: Int)
-
-        fun exploreChunk(point: Point<Char>): Chunk {
+        fun countPriceOfRegion(point: Point<Char>): Int {
             var currentPerimeter = 0
             val area = generateSequence(listOf(point)) { currentPoints ->
                 currentPoints.flatMap { point ->
-                    Moves.Standard.mapNotNull { move ->
-                        val newCoords = point.coordinates + move
-                        input.getOrNull(newCoords)
-                            ?.takeIf { it == point.value }
-                            ?.let { Point(value = it, coordinates = newCoords) }
-                    }
+                    input.getRegionSiblings(point)
                         .also { currentPerimeter += 4 - it.size }
-                        .filter { it.coordinates in points }
-                        .onEach { points.remove(it.coordinates) }
+                        .filter { points.remove(it.coordinates) != null }
                 }.takeIf { it.isNotEmpty() }
             }.sumOf { it.size }
-            return Chunk(area = area, perimeter = currentPerimeter)
+            return area * currentPerimeter
         }
-        return generateSequence { points.pollFirstEntry() }
-            .map { exploreChunk(it.value) }
-            .sumOf { it.area * it.perimeter }
+        return generateSequence { points.pollFirstEntry() }.sumOf { countPriceOfRegion(it.value) }
     }
-
 
     fun part2(input: List<String>): Int {
         val points = input.pointsSequence().associateBy { it.coordinates }.toMap(LinkedHashMap())
 
-        data class ChunkTwo(val area: Int, val numberOfSides: Int)
-
-        fun exploreChunk(point: Point<Char>): ChunkTwo {
-            val visitedEdges = LinkedHashSet<Point<Char>>()
-            var currentPerimeter = 0
+        fun countPriceOfRegion(point: Point<Char>): Int {
+            val visitedEdges = LinkedHashSet<Coordinates>()
             val area = generateSequence(listOf(point)) { currentPoints ->
                 currentPoints.flatMap { point ->
-                    Moves.Standard.mapNotNull { move ->
-                        val newCoords = point.coordinates + move
-                        input.getOrNull(newCoords)
-                            ?.takeIf { it == point.value }
-                            ?.let { Point(value = it, coordinates = newCoords) }
-                    }
-                        .also {
-                            if (it.size < 4) visitedEdges += point
-                            currentPerimeter += 4 - it.size
-                        }
-                        .filter { it.coordinates in points }
-                        .onEach { points.remove(it.coordinates) }
+                    input.getRegionSiblings(point)
+                        .also { if (it.size < 4) visitedEdges += point.coordinates }
+                        .filter { points.remove(it.coordinates) != null }
                 }.takeIf { it.isNotEmpty() }
             }.sumOf { it.size }
 
-            var sides = 0
-            val initialPoint = visitedEdges.first
-            val edgeTurn = Turn.RIGHT
-
-            val startingPoint = Moves.Standard
-                .firstNotNullOf { move ->
-                    val nextCoords = initialPoint.coordinates + move
-                    nextCoords
-                        .takeIf { input.getOrNull(it) != initialPoint.value }
-                        ?.let { MovingPoint(nextCoords, move.turn(edgeTurn)) }
-                }
-            var currentPoint = startingPoint
-            do {
-                val simplePoint = listOf(currentPoint.move, currentPoint.move.turn(Turn.LEFT)).asSequence()
-                    .map { move ->
-                        when (move) {
-                            currentPoint.move -> MovingPoint(currentPoint.coordinates + move, move)
-                            else -> MovingPoint(currentPoint.coordinates, move)
-                        }
-                    }.firstOrNull {
-                        input.getOrNull(it.coordinates) != initialPoint.value
-                            && input.getOrNull(it.coordinates + it.move.turn(edgeTurn)) == initialPoint.value
+            var numberOfSides = 0
+            val visitedPoints = mutableSetOf<MovingPoint>()
+            val turn = Turn.RIGHT
+            visitedEdges.asSequence()
+                .map { initialPoint ->
+                    Moves.Standard.firstNotNullOf { move ->
+                        val nextCoords = (initialPoint + move)
+                        nextCoords.takeIf { input.getOrNull(it) != point.value }
+                            ?.let { MovingPoint(nextCoords, move.turn(turn)) }
                     }
+                }.filter { visitedPoints.add(it) }
+                .forEach { startingPoint ->
+                    var currentPoint = startingPoint
+                    do {
+                        val simplePoint =
+                            listOf(currentPoint.move, currentPoint.move.turn(turn.opposite())).asSequence()
+                                .map { move ->
+                                    when (move) {
+                                        currentPoint.move -> MovingPoint(currentPoint.coordinates + move, move)
+                                        else -> MovingPoint(currentPoint.coordinates, move)
+                                    }
+                                }.firstOrNull {
+                                    input.getOrNull(it.coordinates) != point.value &&
+                                        it.coordinates + it.move.turn(turn) in visitedEdges &&
+                                        input.getOrNull(it.coordinates + it.move.turn(turn)) == point.value
+                                }
 
-                val newPoint = simplePoint ?: run {
-                    val newMove = currentPoint.move.turn(edgeTurn)
-                    val newCoords = currentPoint.coordinates + currentPoint.move + newMove
-                    MovingPoint(newCoords, newMove)
+                        val newPoint = simplePoint ?: run {
+                            val newMove = currentPoint.move.turn(turn)
+                            val newCoords = currentPoint.coordinates + currentPoint.move + newMove
+                            MovingPoint(newCoords, newMove)
+                        }
+
+                        if (newPoint.move != currentPoint.move) numberOfSides++
+                        currentPoint = newPoint
+                        visitedPoints += currentPoint
+                    } while (currentPoint != startingPoint)
                 }
 
-                if (newPoint.move != currentPoint.move) sides++
-                currentPoint = newPoint
-            } while (currentPoint != startingPoint)
-
-            return ChunkTwo(area = area, numberOfSides = sides)
+            return area * numberOfSides
         }
 
-        return generateSequence { points.pollFirstEntry() }
-            .map { exploreChunk(it.value) }
-            .sumOf { it.area * it.numberOfSides }
+        return generateSequence { points.pollFirstEntry() }.sumOf { countPriceOfRegion(it.value) }
     }
 }
 
-
 fun main() {
-//    val input = readInputLines("Day12")
-
-    val input = """
-                XXXXX
-                XX.XX
-                XX.XX
-                XX.XX
-                XX.XX
-    """.trimIndent().lines()
-
-
+    val input = readInputLines("Day12")
     println("part1: ${Day12.part1(input)}")
-//    measureTime {
-//        repeat(100) {
-//            Day12.part1(input)
-//        }
-//    }.also { println(it / 100) }
     println("part2: ${Day12.part2(input)}")
 }

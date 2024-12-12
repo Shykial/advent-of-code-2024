@@ -31,6 +31,11 @@ data class Point<T>(val value: T, val coordinates: Coordinates)
 
 enum class Turn { LEFT, RIGHT }
 
+fun Turn.opposite() = when (this) {
+    Turn.LEFT -> Turn.RIGHT
+    Turn.RIGHT -> Turn.LEFT
+}
+
 infix fun Move.turn(turn: Turn) = when (turn) {
     Turn.LEFT -> Move(yShift = -xShift, xShift = yShift)
     Turn.RIGHT -> Move(yShift = xShift, xShift = -yShift)
