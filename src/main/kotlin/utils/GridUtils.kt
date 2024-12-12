@@ -2,7 +2,18 @@ package utils
 
 data class Coordinates(val y: Int, val x: Int)
 
-data class Move(val yShift: Int, val xShift: Int)
+data class Move(val yShift: Int, val xShift: Int) {
+    companion object {
+        val Up = Move(-1, 0)
+        val Down = Move(1, 0)
+        val Right = Move(0, 1)
+        val Left = Move(0, -1)
+    }
+}
+
+object Moves {
+    val Standard = listOf(Move.Up, Move.Down, Move.Left, Move.Right)
+}
 
 operator fun Coordinates.plus(move: Move) = Coordinates(y = y + move.yShift, x = x + move.xShift)
 
@@ -24,6 +35,8 @@ infix fun Move.turn(turn: Turn) = when (turn) {
     Turn.LEFT -> Move(yShift = -xShift, xShift = yShift)
     Turn.RIGHT -> Move(yShift = xShift, xShift = -yShift)
 }
+
+fun Move.opposite() = Move(yShift = -yShift, xShift = -xShift)
 
 data class MovingPoint(val coordinates: Coordinates, val move: Move)
 

@@ -1,7 +1,7 @@
 package days
 
 import utils.Coordinates
-import utils.Move
+import utils.Moves
 import utils.Point
 import utils.getOrNull
 import utils.plus
@@ -33,18 +33,11 @@ object Day10 {
         }
 
         private fun Point<Int>.hikingSequence() =
-            allowedMoves.asSequence().mapNotNull { move ->
+            Moves.Standard.asSequence().mapNotNull { move ->
                 val newCoords = coordinates + move
                 values.getOrNull(newCoords).takeIf { it == value + 1 }?.let { Point(it, newCoords) }
             }
     }
-
-    private val allowedMoves = listOf(
-        Move(-1, 0),
-        Move(1, 0),
-        Move(0, -1),
-        Move(0, 1),
-    )
 
     private fun parseInput(input: List<String>) = TopographicMap(input.map { it.map(Char::digitToInt) })
 }
