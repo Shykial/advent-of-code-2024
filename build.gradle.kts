@@ -40,6 +40,7 @@ ktlint {
 val benchmarksImplementation by configurations
 
 dependencies {
+    implementation(libs.kotlinx.coroutines.core)
     benchmarksImplementation(libs.kotlinx.benchmark.runtime)
 }
 

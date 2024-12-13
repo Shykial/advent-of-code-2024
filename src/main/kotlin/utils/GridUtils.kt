@@ -1,6 +1,7 @@
 package utils
 
 data class Coordinates(val y: Int, val x: Int)
+data class LongCoordinates(val y: Long, val x: Long)
 
 data class Move(val yShift: Int, val xShift: Int) {
     companion object {
@@ -16,6 +17,7 @@ object Moves {
 }
 
 operator fun Coordinates.plus(move: Move) = Coordinates(y = y + move.yShift, x = x + move.xShift)
+operator fun LongCoordinates.plus(move: Move) = LongCoordinates(y = y + move.yShift, x = x + move.xShift)
 
 operator fun Coordinates.minus(move: Move) = Coordinates(y = y - move.yShift, x = x - move.xShift)
 
