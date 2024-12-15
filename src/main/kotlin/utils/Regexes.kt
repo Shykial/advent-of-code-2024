@@ -2,5 +2,6 @@ package utils
 
 object Regexes {
     val WhiteSpace = Regex("""\s+""")
-    val Digits = Regex("""\d+""")
+    val NonNegativeDigits = Regex("""\d+""")
+    val Digits = Regex("""-?\d+""")
 }

@@ -80,7 +80,7 @@ object Day13 {
             .splitBy { it.isBlank() }
             .map { lines ->
                 val (a, b, prize) = lines.map { line ->
-                    Regexes.Digits.findAll(line).map { it.value.toInt() }.toList()
+                    Regexes.NonNegativeDigits.findAll(line).map { it.value.toInt() }.toList()
                 }
                 ClawMachine(
                     buttonA = Move(xShift = a.first(), yShift = a.last()),
