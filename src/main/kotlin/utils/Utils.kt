@@ -36,3 +36,14 @@ inline fun <T, R> Pair<T, T>.map(transform: (T) -> R): Pair<R, R> = transform(fi
 fun String.cutAt(index: Int): Pair<String, String> = take(index) to drop(index)
 
 fun String.cutInHalf(): Pair<String, String> = cutAt(length / 2)
+
+fun <T> Sequence<T>.takeWhileInclusive(predicate: (T) -> Boolean) = Sequence {
+    object : Iterator<T> {
+        private val originalIterator = this@takeWhileInclusive.iterator()
+        private var predicateMet = true
+
+        override fun next(): T = originalIterator.next().also { predicateMet = predicate(it) }
+
+        override fun hasNext() = predicateMet && originalIterator.hasNext()
+    }
+}

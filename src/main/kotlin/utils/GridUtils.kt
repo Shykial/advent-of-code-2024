@@ -25,9 +25,18 @@ operator fun Coordinates.minus(other: Coordinates) = Move(yShift = y - other.y, 
 
 fun List<CharSequence>.getOrNull(coordinates: Coordinates): Char? = getOrNull(coordinates.y)?.getOrNull(coordinates.x)
 
+@JvmName("getOrNullCharArray")
+fun List<CharArray>.getOrNull(coordinates: Coordinates): Char? = getOrNull(coordinates.y)?.getOrNull(coordinates.x)
+
 fun <T> List<List<T>>.getOrNull(coordinates: Coordinates): T? = getOrNull(coordinates.y)?.getOrNull(coordinates.x)
 
 operator fun List<CharSequence>.contains(coordinates: Coordinates) = getOrNull(coordinates) != null
+
+operator fun List<CharArray>.get(coordinates: Coordinates) = this[coordinates.y][coordinates.x]
+
+operator fun List<CharArray>.set(coordinates: Coordinates, value: Char) {
+    this[coordinates.y][coordinates.x] = value
+}
 
 data class Point<T>(val value: T, val coordinates: Coordinates)
 
