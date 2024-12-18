@@ -6,6 +6,7 @@ import utils.getOrNull
 import utils.plus
 import utils.readInputLines
 import utils.set
+import java.util.LinkedList
 import java.util.PriorityQueue
 
 object Day18 {
@@ -17,41 +18,51 @@ object Day18 {
     fun part1(input: List<String>): Int =
         input.map { parseLine(it) }
             .let(::createMemoryGrid)
-            .getFastestSolutionOrNull()!!
+            .getSolutionCoords().size
 
     fun part2(input: List<String>): String {
         val fallenBytes = input.map { parseLine(it) }
         val grid = createMemoryGrid(fallenBytes)
-        return fallenBytes.asSequence().drop(BYTES_FALLEN)
-            .onEach { coordinates -> grid.values[coordinates] = CORRUPTED }
-            .first { grid.getFastestSolutionOrNull() == null }
-            .let { "${it.x},${it.y}" }
+        val seenSolutions = LinkedList<Set<Coordinates>>()
+        return fallenBytes.asSequence()
+            .drop(BYTES_FALLEN)
+            .first { coords ->
+                grid.values[coords] = CORRUPTED
+                seenSolutions.removeAll { coords in it }
+                seenSolutions.isEmpty() && grid.getSolutionCoords().also { seenSolutions += it }.isEmpty()
+            }.let { "${it.x},${it.y}" }
     }
 
     private data class MutableMemoryGrid(val values: List<CharArray>) {
         private val endCoordinates = Coordinates(SIZE - 1, SIZE - 1)
 
-        fun getFastestSolutionOrNull(): Int? {
-            val start = ExploredNode(Coordinates(0, 0), 0)
+        fun getSolutionCoords(): Set<Coordinates> {
+            val start = LinkedExploredNode(ExploredNode(Coordinates(0, 0), 0), null)
             val visitedPoints = HashSet<Coordinates>()
-            val nodesToExplore = PriorityQueue<ExploredNode>(compareBy { it.totalCost })
+            val nodesToExplore = PriorityQueue<LinkedExploredNode>(compareBy { it.current.totalCost })
 
-            return generateSequence(start) { nodesToExplore.poll() }
+            val winningNode = generateSequence(start) { nodesToExplore.poll() }
                 .onEach { bestNode ->
-                    visitedPoints += bestNode.coordinates
-                    nodesToExplore += bestNode.getNextNodes().filter { it.coordinates !in visitedPoints }
-                }.firstOrNull { it.coordinates == endCoordinates }?.movesSoFar
+                    nodesToExplore += bestNode.getNextNodes().filter { it.current.coordinates !in visitedPoints }
+                    visitedPoints += bestNode.current.coordinates
+                }.firstOrNull { it.current.coordinates == endCoordinates }
+
+            return generateSequence(winningNode) { it.previous }.map { it.current.coordinates }.toSet()
         }
 
-
-        private fun ExploredNode.getNextNodes() =
+        private fun LinkedExploredNode.getNextNodes() =
             Moves.Standard.asSequence()
-                .mapNotNull { move -> (coordinates + move).takeIf { values.getOrNull(it) == SAFE } }
-                .map { ExploredNode(it, movesSoFar + 1) }
+                .mapNotNull { move -> (current.coordinates + move).takeIf { values.getOrNull(it) == SAFE } }
+                .map { LinkedExploredNode(ExploredNode(it, current.movesSoFar + 1), this) }
+
+        private data class LinkedExploredNode(
+            val current: ExploredNode,
+            val previous: LinkedExploredNode? = null,
+        )
 
         private data class ExploredNode(
             val coordinates: Coordinates,
-            val movesSoFar: Int
+            val movesSoFar: Int,
         ) {
             val totalCost = (SIZE - 1 - coordinates.y) + (SIZE - 1 - coordinates.x) + movesSoFar
         }
@@ -74,7 +85,6 @@ object Day18 {
 
 fun main() {
     val input = readInputLines("Day18")
-
     println("part1: ${Day18.part1(input)}")
     println("part2: ${Day18.part2(input)}")
 }
