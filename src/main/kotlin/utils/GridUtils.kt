@@ -1,5 +1,7 @@
 package utils
 
+import kotlin.math.abs
+
 data class Coordinates(val y: Int, val x: Int)
 data class LongCoordinates(val y: Long, val x: Long)
 
@@ -66,3 +68,5 @@ fun <T> List<List<T>>.pointsSequence(): Sequence<Point<T>> =
     asSequence().flatMapIndexed { y, row ->
         row.mapIndexed { x, element -> Point(element, Coordinates(y, x)) }
     }
+
+fun Coordinates.distanceFrom(other: Coordinates) = abs(y - other.y) + abs(x - other.x)
