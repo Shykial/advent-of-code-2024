@@ -37,7 +37,7 @@ fun String.cutAt(index: Int): Pair<String, String> = take(index) to drop(index)
 
 fun String.cutInHalf(): Pair<String, String> = cutAt(length / 2)
 
-fun <T> Sequence<T>.takeWhileInclusive(predicate: (T) -> Boolean) = Sequence {
+inline fun <T> Sequence<T>.takeWhileInclusive(crossinline predicate: (T) -> Boolean) = Sequence {
     object : Iterator<T> {
         private val originalIterator = this@takeWhileInclusive.iterator()
         private var predicateMet = true
@@ -45,5 +45,27 @@ fun <T> Sequence<T>.takeWhileInclusive(predicate: (T) -> Boolean) = Sequence {
         override fun next(): T = originalIterator.next().also { predicateMet = predicate(it) }
 
         override fun hasNext() = predicateMet && originalIterator.hasNext()
+    }
+}
+
+inline fun <T> Sequence<T>.chunkedBy(crossinline keySelector: (T) -> Any?): Sequence<List<T>> {
+    val iterator = iterator()
+    if (!iterator.hasNext()) return emptySequence()
+    val first = iterator.next()
+    var currentAggregate = mutableListOf(first)
+    var currentKey = keySelector(first)
+
+    return sequence {
+        iterator.forEach { element ->
+            when (val key = keySelector(element)) {
+                currentKey -> currentAggregate += element
+                else -> {
+                    yield(currentAggregate)
+                    currentAggregate = mutableListOf(element)
+                    currentKey = key
+                }
+            }
+        }
+        yield(currentAggregate)
     }
 }

@@ -4,7 +4,6 @@ import utils.readInputLines
 import utils.splitBy
 
 object Day19 {
-
     fun part1(input: List<String>): Int = with(parseInput(input)) {
         patterns.count { isPossibleDesign(it, availableTowels) }
     }

@@ -4,6 +4,7 @@ import utils.Coordinates
 import utils.Move
 import utils.Moves
 import utils.MovingPoint
+import utils.chunkedBy
 import utils.getOrNull
 import utils.opposite
 import utils.plus
@@ -58,7 +59,6 @@ object Day16 {
                 current = ExploredNode(movingPoint = MovingPoint(start, Move.Right), totalCost = 0),
                 previous = null,
             )
-            var minScore: Int? = null
             return generateSequence(startingNode) { nodesToExplore.poll() }
                 .onEachIndexed { index, bestNode ->
                     visitedPoints[bestNode.current.movingPoint] = bestNode.current.totalCost
@@ -68,8 +68,8 @@ object Day16 {
                             previousCost == null || it.totalCost <= previousCost
                         }.map { LinkedExploredNode(it, bestNode) }
                 }.filter { it.current.movingPoint.coordinates == end }
-                .filter { minScore == null || it.current.totalCost == minScore }
-                .onEach { minScore = it.current.totalCost }
+                .chunkedBy { it.current.totalCost }
+                .first()
                 .flatMap { it.allCoordsSequence() }
                 .toSet()
         }
