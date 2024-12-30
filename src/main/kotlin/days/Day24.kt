@@ -39,25 +39,32 @@ object Day24 {
             .fold(0L) { acc, shift -> acc + (1L shl shift) }
     }
 
-    private fun List<Operation>.sorted(): List<Operation> {
-        val seenOutputs = mutableSetOf<String>()
-        val remainingOperations = this.toCollection(LinkedList())
-        return buildList(this.size) {
-            w@ while (remainingOperations.isNotEmpty()) {
-                val iterator = remainingOperations.iterator()
-                for (element in iterator) {
-                    if (
-                        (element.first.startsWith('x') || element.first.startsWith('y') || element.first in seenOutputs)
-                        && (element.second.startsWith('x') || element.second.startsWith('y') || element.second in seenOutputs)
-                    ) {
-                        this += element
-                        seenOutputs += element.output
-                        iterator.remove()
-                        continue@w
-                    }
-                }
-            }
-        }
+    fun part2(input: List<String>): String = runBlocking(Dispatchers.Default) {
+        val parsed = parseInput(input).let { it.copy(operations = it.operations.sorted()) }
+        val randomizedInputs = List(50) { parsed.initialValues.mapValues { Random.nextInt(0..1) } }
+        val allPossiblePairs = parsed.operations.pairCombinations().toList()
+
+        val nodesToExplore = PriorityQueue<ExploredNode>(compareBy { it.heuristicCost })
+        val startingNode = ExploredNode(pairsSwitched = emptyList(), numberOfIncorrectZs = parsed.incorrectZsOrNull()!!)
+
+        generateSequence(startingNode) { nodesToExplore.poll() }
+            .asFlow()
+            .onEach { bestNode ->
+                if (bestNode.pairsSwitched.size == 4) return@onEach
+                nodesToExplore += allPossiblePairs
+                    .filter { it.first !in bestNode.affectedPairs && it.second !in bestNode.affectedPairs }
+                    .map { pair ->
+                        async {
+                            parsed.exploredNodeWithPairsOrNull(
+                                randomizedInputs = randomizedInputs,
+                                newPairs = bestNode.pairsSwitched + pair,
+                            )
+                        }
+                    }.mapNotNull { it.await() }
+            }.first { it.heuristicCost == 0 }
+            .affectedPairs.map { it.output }
+            .sorted()
+            .joinToString(",")
     }
 
     private fun ParsedInput.incorrectZsOrNull(): Int? {
@@ -74,123 +81,70 @@ object Day24 {
         var actualZ = 0L
         val values = initialValues.toMutableMap()
         val remainingOperations = operations.toCollection(LinkedList())
-        w@ while (remainingOperations.isNotEmpty()) {
+        while (remainingOperations.isNotEmpty()) {
             val iterator = remainingOperations.iterator()
-            for (element in iterator) {
+            iterator.forEach { element ->
                 if (element.first in values && element.second in values) {
                     val result = element.operation(values[element.first]!!, values[element.second]!!)
                     if (result == 1 && element.output.first() == 'z') {
                         actualZ += 1L shl element.output.drop(1).toInt()
                     }
-                    values[element.output] = element.operation(values[element.first]!!, values[element.second]!!)
+                    values[element.output] = result
                     iterator.remove()
-                    continue@w
+                    continue
                 }
             }
             return null
-//            remainingOperations -= operations
-//                .firstOrNull { it.first in values && it.second in values }
-//                ?.also {
-//                    val result = it.operation(values[it.first]!!, values[it.second]!!)
-//                    if (result == 1 && it.output.first() == 'z') {
-//                        actualZ += 1L shl it.output.drop(1).toInt()
-//                    }
-//                    values[it.output] = it.operation(values[it.first]!!, values[it.second]!!)
-//                } ?: return null
         }
 
         val bitDiff = (x + y) xor actualZ
         return bitDiff.countOneBits()
     }
 
-    private fun ParsedInput.incorrectZsOrNull2(): Int? {
-        val values = initialValues.toMutableMap()
-
-        val remainingOperations = operations.toCollection(LinkedList())
-        while (remainingOperations.isNotEmpty()) {
-            remainingOperations -= remainingOperations
-                .firstOrNull { it.first in values && it.second in values }
-                ?.also { values[it.output] = it.operation(values[it.first]!!, values[it.second]!!) }
-                ?: return null
+    private fun List<Operation>.withSwappedOutputs(
+        pairs: Iterable<Pair<Operation, Operation>>,
+    ) = toMutableList().apply {
+        pairs.forEach { (first, second) ->
+            this[indexOf(first)] = first.copy(output = second.output)
+            this[indexOf(second)] = second.copy(output = first.output)
         }
-        var x = 0L
-        var y = 0L
-        var actualZ = 0L
-
-        values.asSequence()
-            .filter { it.value == 1 }
-            .map { it.key }
-            .forEach { key ->
-                when (key.first()) {
-                    'x' -> x += 1L shl key.takeLast(2).toInt()
-                    'y' -> y += 1L shl key.takeLast(2).toInt()
-                    'z' -> actualZ += 1L shl key.takeLast(2).toInt()
-                }
-            }
-        val bitDiff = (x + y) xor actualZ
-        return bitDiff.countOneBits()
     }
 
-    private val seededRandom = Random(123)
+    private fun ParsedInput.exploredNodeWithPairsOrNull(
+        newPairs: List<Pair<Operation, Operation>>,
+        randomizedInputs: List<Map<String, Int>>,
+    ): ExploredNode? {
+        val newTotalCount = randomizedInputs
+            .sumOf {
+                ParsedInput(initialValues = it, operations = operations.withSwappedOutputs(newPairs))
+                    .incorrectZsOrNull()
+                    ?: return null
+            }
+        return ExploredNode(pairsSwitched = newPairs, numberOfIncorrectZs = newTotalCount)
+    }
 
-    fun part2(input: List<String>): String = runBlocking(Dispatchers.Default) {
-        val parsed = parseInput(input).let { it.copy(operations = it.operations.sorted()) }
-        val randomizedInputs = List(50) { parsed.initialValues.mapValues { seededRandom.nextInt(0..1) } }
+    private fun List<Operation>.sorted(): List<Operation> {
+        val seenOutputs = mutableSetOf<String>()
+        val remainingOperations = this.toCollection(LinkedList())
+        fun String.isReadyForProcessing() = startsWith('x') || startsWith('y') || this in seenOutputs
 
-        val allPossiblePairs = parsed.operations.pairCombinations().toList()
-        val operationIndexes = parsed.operations.withIndex().associate { it.value to it.index }
-
-        fun List<Operation>.withSwappedOutputs(pairs: Iterable<Pair<Operation, Operation>>) = toMutableList().apply {
-            pairs.forEach { (first, second) ->
-                this[operationIndexes[first]!!] = first.copy(output = second.output)
-                this[operationIndexes[second]!!] = second.copy(output = first.output)
+        return buildList(this.size) {
+            while (remainingOperations.isNotEmpty()) {
+                val iterator = remainingOperations.iterator()
+                iterator.forEach { element ->
+                    if (element.first.isReadyForProcessing() && element.second.isReadyForProcessing()) {
+                        this += element
+                        seenOutputs += element.output
+                        iterator.remove()
+                        continue
+                    }
+                }
             }
         }
-
-        val nodesToExplore = PriorityQueue<ExploredNode>(compareBy { it.heuristicCost })
-        val startingNode = ExploredNode(pairsSwitched = emptySet(), numberOfIncorrectZs = parsed.incorrectZsOrNull()!!)
-
-        val winning = generateSequence(startingNode) { nodesToExplore.poll() }
-            .asFlow()
-            .onEach { bestNode ->
-                println("processing next node, queue size: ${nodesToExplore.size}")
-                if (bestNode.pairsSwitched.size < 4) {
-                    nodesToExplore += allPossiblePairs
-                        .filter { it.first !in bestNode.affectedPairs && it.second !in bestNode.affectedPairs }
-                        .map { pair ->
-                            async {
-                                val newPairs = bestNode.pairsSwitched + pair
-                                when {
-                                    parsed
-                                        .copy(operations = parsed.operations.withSwappedOutputs(newPairs))
-                                        .incorrectZsOrNull() == null -> null
-
-                                    else -> {
-                                        val newTotalCount = randomizedInputs.sumOf {
-                                            ParsedInput(
-                                                initialValues = it,
-                                                operations = parsed.operations.withSwappedOutputs(newPairs),
-                                            ).incorrectZsOrNull()!!
-                                        }
-                                        ExploredNode(
-                                            pairsSwitched = newPairs,
-                                            numberOfIncorrectZs = newTotalCount,
-                                        )
-                                    }
-                                }
-                            }
-                        }.mapNotNull { it.await() }
-                }
-            }.first { it.heuristicCost == 0 }
-
-        winning
-            .affectedPairs.map { it.output }
-            .sorted()
-            .joinToString(",")
     }
 
     private data class ExploredNode(
-        val pairsSwitched: Set<Pair<Operation, Operation>>,
+        val pairsSwitched: List<Pair<Operation, Operation>>,
         val numberOfIncorrectZs: Int,
     ) {
         val affectedPairs = pairsSwitched.flatMap { it.toList() }.toSet()

@@ -21,7 +21,7 @@ val benchmarksSourceSet = sourceSets.create("benchmarks")
 kotlin {
     jvmToolchain(21)
     compilerOptions {
-        freeCompilerArgs.add("-Xmulti-dollar-interpolation")
+        freeCompilerArgs.addAll("-Xmulti-dollar-interpolation", "-Xnon-local-break-continue")
     }
     target {
         compilations["benchmarks"].associateWith(compilations["main"])
