@@ -1,5 +1,7 @@
 package utils
 
+import kotlinx.coroutines.flow.flow
+
 fun <T> List<T>.minusIndex(index: Int) = filterIndexed { idx, _ -> idx != index }
 
 fun <T> Iterable<T>.groupByCount(): Map<T, Int> = groupingBy { it }.eachCount()
@@ -67,5 +69,13 @@ inline fun <T> Sequence<T>.chunkedBy(crossinline keySelector: (T) -> Any?): Sequ
             }
         }
         yield(currentAggregate)
+    }
+}
+
+inline fun <T : Any> generateFlow(seed: T, crossinline supplier: suspend (T) -> T?) = flow {
+    var current: T? = seed
+    while (current != null) {
+        emit(current)
+        current = supplier(current)
     }
 }
